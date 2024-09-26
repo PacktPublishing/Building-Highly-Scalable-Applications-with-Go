@@ -1,0 +1,157 @@
+---
+openapi: 3.0.3
+info:
+  title: Account Service REST API
+  description: |
+    This API allows managing Bitcoin accounts in the UTXO Tracker.
+    Users can create, list and retrieve accounts along with its 
+    associated data.
+  version: v1
+
+servers:
+  - url: /rest/v1
+    description: Base URL for the API
+
+tags:
+  - name: Accounts
+    description: Resources related to Bitcoin account management
+
+paths:
+  /accounts:
+    get:
+      summary: Get all Bitcoin accounts for a user
+      description: |
+        Retrieves a list of all previously
+        registered accounts.
+      operationId: getAccounts
+      tags:
+        - Accounts
+      parameters:
+        - name: X-User-ID
+          in: header
+          required: true
+          description: Unique identifier for the user.
+          schema:
+            type: string
+            example: "abcd5678"
+      responses:
+        '200':
+          description: A list of accounts.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  accounts:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Account'
+        '500':
+          description: Internal server error
+    post:
+      summary: Creates a new Bitcoin account
+      description: Registers a new Bitcoin account with the UTXO Tracker.
+      operationId: createAccount
+      tags:
+        - Accounts
+      parameters:
+        - name: X-User-ID
+          in: header
+          required: true
+          description: Unique identifier for the user.
+          schema:
+            type: string
+            example: "abcd5678"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NewAccountRequest'
+      responses:
+        '201':
+          description: Account successfully created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Account'
+        '400':
+          description: Invalid request payload
+        '500':
+          description: Internal server error
+
+  /accounts/{accountId}:
+    get:
+      summary: Get account by ID
+      description: Retrieves a specific account by its ID.
+      operationId: getAccountById
+      tags:
+        - Accounts
+      parameters:
+        - name: accountId
+          in: path
+          required: true
+          description: Unique ID of the account
+          schema:
+            type: string
+        - name: X-User-ID
+          in: header
+          required: true
+          description: Unique identifier for the user (anonymously tracked).
+          schema:
+            type: string
+            example: "abcd5678"
+      responses:
+        '200':
+          description: Account details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Account'
+        '404':
+          description: Account not found
+        '500':
+          description: Internal server error
+
+components:
+  schemas:
+    Account:
+      type: object
+      required:
+        - id
+        - name
+        - addresses
+      properties:
+        id:
+          type: string
+          description: Unique identifier for the account
+          example: "12345"
+        name:
+          type: string
+          description: The name of the account
+          example: "Satoshi's Bitcoin Wallet"
+        addresses:
+          type: array
+          description: List of Bitcoin addresses associated with the account
+          items:
+            type: string
+            example: "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa"
+
+    NewAccountRequest:
+      type: object
+      required:
+        - name
+        - addresses
+      properties:
+        name:
+          type: string
+          description: The name of the new account
+          example: "Satoshi's main Bitcoin account"
+        addresses:
+          type: array
+          description: |
+            List of Bitcoin addresses to associate with the new 
+            account.
+          items:
+            type: string
+            example: "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa"

@@ -1,0 +1,48 @@
+# See https://golangci-lint.run/ for linters to enable and configure
+
+linters-settings:
+  unused:
+    go: "1.22"
+
+  errorlint:
+    # Check whether fmt.Errorf uses the %w verb for formatting errors. See the readme for caveats
+    errorf: true
+    # Check for plain type assertions and type switches
+    asserts: true
+    # Check for plain error comparisons
+    comparison: true
+
+  revive:
+    # see https://github.com/mgechev/revive#available-rules for details.
+    ignore-generated-header: true
+    severity: warning
+    rules:
+      - name: errorf # Should replace errors.New(fmt.Sprintf()) with fmt.Errorf()
+      - name: range # Prevents redundant variables when iterating over a collection.
+      - name: empty-block # Warns on empty code blocks
+      - name: unreachable-code # Warns on unreachable code
+      - name: unnecessary-stmt # Suggests removing or simplifying unnecessary statements
+      - name: struct-tag # Checks common struct tags like json,xml,yaml
+      - name: range-val-in-closure # Warns if range value is used in a closure dispatched as goroutine
+      - name: atomic # 	Check for common mistaken usages of the sync/atomic package
+      - name: call-to-gc # Warns on explicit call to the garbage collector
+      - name: defer # Warns on some defer gotchas
+      - name: time-naming # Conventions around the naming of time variables.
+      - name: unexported-return # Warns when a public return is from unexported type.
+
+# See https://golangci-lint.run/ for linters to enable and configure
+linters:
+  enable:
+    - gofmt
+    - cyclop # Checks function and package cyclomatic complexity
+    - goprintffuncname # Checks that printf-like functions are named with f at the end
+    - gosec # Inspects source code for security problems
+    - funlen # Tool for detection of long functions
+    - gosimple # Linter for Go source code that specializes in simplifying a code
+    - gocritic # Provides many diagnostics that check for bugs, performance and style issues.
+    - makezero # Finds slice declarations with non-zero initial length
+    - revive # Extra fast, configurable, extensible, flexible, and beautiful linter for Go. Drop-in replacement of golint.
+
+issues:
+  exclude-files:
+    - internal/infra/api/restv1/api.gen.go

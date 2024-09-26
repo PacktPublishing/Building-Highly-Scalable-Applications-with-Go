@@ -1,0 +1,37 @@
+---
+version: 3
+allow:
+  depOnAnyVendor: true
+
+exclude: [api, test]
+excludeFiles: [".*_test.go", "magefile.go", "tools.go"]
+
+components:
+  account-service:
+    in: cmd/account-service/**
+  fiat-quoter:
+    in: cmd/fiat-quoter/**
+  utxo-fetcher:
+    in: cmd/utxo-fetcher/**
+  infra:
+    in: internal/infra**
+  app:
+    in: internal/app**
+  domain:
+    in: internal/domain**
+  pkg:
+    in: pkg/**
+
+commonComponents: [domain, pkg]
+
+deps:
+  account-service:
+    mayDependOn: [account-service, domain, app, infra]
+  fiat-quoter:
+    mayDependOn: [fiat-quoter, domain, app, infra]
+  utxo-fetcher:
+    mayDependOn: [utxo-fetcher, domain, app, infra]
+  infra:
+    mayDependOn: [domain, app, infra]
+  app:
+    mayDependOn: [domain, app]
