@@ -3,3 +3,4 @@ fiat-quoter
 utxo-fetcher
 *.gen.go
 .DS_Store
+cp.txt

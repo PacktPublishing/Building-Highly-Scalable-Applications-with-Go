@@ -30,6 +30,12 @@ linters-settings:
       - name: time-naming # Conventions around the naming of time variables.
       - name: unexported-return # Warns when a public return is from unexported type.
 
+  sloglint:
+    # Enforce a single key naming convention.
+    # Values: snake, kebab, camel, pascal
+    # Default: ""
+    key-naming-case: snake
+
 # See https://golangci-lint.run/ for linters to enable and configure
 linters:
   enable:
@@ -42,6 +48,7 @@ linters:
     - gocritic # Provides many diagnostics that check for bugs, performance and style issues.
     - makezero # Finds slice declarations with non-zero initial length
     - revive # Extra fast, configurable, extensible, flexible, and beautiful linter for Go. Drop-in replacement of golint.
+    - sloglint
 
 issues:
   exclude-files:
