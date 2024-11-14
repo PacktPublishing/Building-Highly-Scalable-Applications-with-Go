@@ -19,6 +19,14 @@ func HTTPConfig() config.HTTPServer {
 	}
 }
 
+// MonitoringServerConfig loads HTTP server config where metrics
+// and probes will be hosted.
+func MonitoringServerConfig() config.HTTPServer {
+	return config.HTTPServer{
+		Port: asIntOrDef("MONITORING_HTTP_PORT", 8081),
+	}
+}
+
 func asIntOrDef(key string, defaultVal int) int {
 	valueStr := os.Getenv(key)
 	if value, err := strconv.Atoi(valueStr); err == nil {

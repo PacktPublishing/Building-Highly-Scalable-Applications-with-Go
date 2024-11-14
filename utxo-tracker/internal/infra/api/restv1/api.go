@@ -5,6 +5,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/hannesdejager/utxo-tracker/internal/infra/prometheus"
 	"github.com/hannesdejager/utxo-tracker/pkg/gons/restdocs"
 )
 
@@ -14,14 +15,15 @@ func NewHandler(baseURL string) http.Handler {
 	r := chi.NewRouter()
 	r.Use(middleware.AllowContentType("application/json"))
 	r.Use(middleware.Recoverer)
+	r.Use(prometheus.APIMiddleware)
 	r.Get(baseURL+"/spec", SpecHandler())
 	r.Mount(baseURL+"/docs", restdocs.New(
 		restdocs.WithSpecURL(baseURL+"/spec"),
 		restdocs.WithBaseURL(baseURL+"/docs"),
 		restdocs.WithHtmlTitle("Account Service API"),
 	).Handler())
-	r.Get("/rest/v1", func(w http.ResponseWriter, r *http.Request) {
-		http.Redirect(w, r, "/rest/v1/docs", http.StatusMovedPermanently)
+	r.Get(baseURL, func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, baseURL+"/docs", http.StatusMovedPermanently)
 	})
 	return HandlerFromMuxWithBaseURL(
 		&impl{},

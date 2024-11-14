@@ -7,6 +7,7 @@ import (
 	"github.com/hannesdejager/utxo-tracker/internal/infra/env"
 	"github.com/hannesdejager/utxo-tracker/internal/infra/httpsvr"
 	"github.com/hannesdejager/utxo-tracker/internal/infra/logging"
+	"github.com/hannesdejager/utxo-tracker/internal/infra/prometheus"
 	"github.com/hannesdejager/utxo-tracker/internal/infra/sys"
 )
 
@@ -22,7 +23,11 @@ func main() {
 	)
 	svr := httpsvr.StartAsync(
 		env.HTTPConfig(),
-		restv1.NewHandler("/rest/v1"))
+		restv1.NewHandler("/rest/v1"),
+	)
+	_ = httpsvr.StartAsync(env.MonitoringServerConfig(),
+		prometheus.NewHandler(inf))
+
 	sys.AwaitTermination()
 	log.Info("Shutting down...")
 	httpsvr.StopGracefully(svr, 30*time.Second)
