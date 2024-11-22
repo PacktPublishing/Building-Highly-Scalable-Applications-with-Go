@@ -27,10 +27,29 @@ func MonitoringServerConfig() config.HTTPServer {
 	}
 }
 
+// TracingConfig loads tracing configuration from
+// the environment
+func TracingConfig() config.Tracing {
+	return config.Tracing{
+		ExportEndpointURL: asStringOrDef(
+			"TRACING_EXPORTER_ENDPOINT",
+			"http://localhost:4318/v1/traces",
+		),
+	}
+}
+
 func asIntOrDef(key string, defaultVal int) int {
 	valueStr := os.Getenv(key)
 	if value, err := strconv.Atoi(valueStr); err == nil {
 		return value
 	}
 	return defaultVal
+}
+
+func asStringOrDef(key string, defaultVal string) string {
+	v := os.Getenv(key)
+	if v == "" {
+		return defaultVal
+	}
+	return v
 }

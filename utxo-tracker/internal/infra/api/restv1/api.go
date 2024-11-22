@@ -1,21 +1,26 @@
 package restv1
 
 import (
+	"log/slog"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/hannesdejager/utxo-tracker/internal/infra/jaeger"
+	"github.com/hannesdejager/utxo-tracker/internal/infra/logging"
 	"github.com/hannesdejager/utxo-tracker/internal/infra/prometheus"
 	"github.com/hannesdejager/utxo-tracker/pkg/gons/restdocs"
 )
 
 //go:generate ../../../../scripts/gen-rest-v1-api.sh
 
-func NewHandler(baseURL string) http.Handler {
+func NewHandler(log *slog.Logger, baseURL string) http.Handler {
 	r := chi.NewRouter()
-	r.Use(middleware.AllowContentType("application/json"))
-	r.Use(middleware.Recoverer)
 	r.Use(prometheus.APIMiddleware)
+	r.Use(jaeger.TracingMiddleware)
+	r.Use(logging.APIRequestLogger(log))
+	r.Use(middleware.AllowContentType("application/json"))
+	r.Use(logging.Recoverer(log))
 	r.Get(baseURL+"/spec", SpecHandler())
 	r.Mount(baseURL+"/docs", restdocs.New(
 		restdocs.WithSpecURL(baseURL+"/spec"),
