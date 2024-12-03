@@ -3,12 +3,18 @@
 package main
 
 import (
+	"context"
 	"fmt"
+	"path"
 	"path/filepath"
 	"runtime"
 	"strings"
 	"time"
 
+	"github.com/google/go-containerregistry/pkg/name"
+	"github.com/google/go-containerregistry/pkg/v1/remote"
+	"github.com/google/ko/pkg/build"
+	"github.com/google/ko/pkg/publish"
 	"github.com/hannesdejager/utxo-tracker/internal/domain"
 	"github.com/magefile/mage/mg"
 	"github.com/magefile/mage/sh"
@@ -83,6 +89,23 @@ func Generate() error {
 	)
 }
 
+type Image mg.Namespace
+
+// Account_service creates a Docker image for the account service
+func (Image) Account_service() error {
+	mg.Deps(Generate)
+	v, e := versionInfo()
+	if e != nil {
+		return e
+	}
+	name, e := koImg("account-service", v)
+	if e != nil {
+		return fmt.Errorf("could not build image: %w", e)
+	}
+	fmt.Println(name)
+	return nil
+}
+
 // module returns the Go module name
 func module() string {
 	m, _ := sh.Output("go", "list", "-m")
@@ -121,24 +144,90 @@ func versionInfo() (r domain.ServiceVersion, e error) {
 	return
 }
 
+func ldflags(v domain.ServiceVersion) string {
+	bindPath := fmt.Sprintf("%s/internal/infra/linker",
+		module())
+	return fmt.Sprintf(
+		"-X '%[1]s.CommitShortHash=%[2]s' "+
+			"-X '%[1]s.CommitLongHash=%[3]s' "+
+			"-X '%[1]s.CommitDate=%[4]s' "+
+			"-X '%[1]s.CommitSubject=%[5]s' "+
+			"-X '%[1]s.Committer=%[6]s' "+
+			"-X '%[1]s.BuildDate=%[7]s' "+
+			"-X '%[1]s.GoVersion=%[8]s' "+
+			"-s -w",
+		bindPath,
+		v.CommitShortHash,
+		v.CommitLongHash,
+		v.CommitDate,
+		strings.Replace(v.CommitSubject, "'", "`", -1),
+		strings.Replace(v.Committer, "'", "", -1),
+		v.BuildDate,
+		v.GoVersion)
+}
+
 func buildCmd(service string, v domain.ServiceVersion) error {
-	bindPath := fmt.Sprintf("%s/internal/infra/linker", module())
-	return sh.RunV("go", "build", "-o", service,
-		"-ldflags", fmt.Sprintf(
-			"-X '%[1]s.CommitShortHash=%[2]s' "+
-				"-X '%[1]s.CommitLongHash=%[3]s' "+
-				"-X '%[1]s.CommitDate=%[4]s' "+
-				"-X '%[1]s.CommitSubject=%[5]s' "+
-				"-X '%[1]s.Committer=%[6]s' "+
-				"-X '%[1]s.BuildDate=%[7]s' "+
-				"-X '%[1]s.GoVersion=%[8]s'",
-			bindPath,
-			v.CommitShortHash,
-			v.CommitLongHash,
-			v.CommitDate,
-			strings.Replace(v.CommitSubject, "'", "`", -1),
-			strings.Replace(v.Committer, "'", "", -1),
-			v.BuildDate,
-			v.GoVersion),
+	env := map[string]string{"CGO_ENABLED": "0"}
+	return sh.RunWithV(env, "go", "build", "-o", service,
+		"-ldflags", ldflags(v),
 		filepath.Join("cmd", service, "main.go"))
+}
+
+func imageNamer(base, importpath string) string {
+	return path.Join(base, path.Base(importpath))
+}
+
+func koImg(service string, v domain.ServiceVersion) (
+	name.Reference, error) {
+	ctx := context.Background()
+
+	b, err := build.NewGo(ctx, ".",
+		build.WithPlatforms("linux/amd64"),
+		build.WithDefaultLdflags(
+			strings.Split(ldflags(v), " "),
+		),
+		build.WithBaseImages(func(
+			ctx context.Context,
+			_ string) (name.Reference, build.Result, error) {
+			ref := name.MustParseReference(
+				"cgr.dev/chainguard/static:latest")
+			base, err := remote.Index(
+				ref, remote.WithContext(ctx))
+			return ref, base, err
+		}),
+	)
+	if err != nil {
+		return nil,
+			fmt.Errorf("could not create image builder: %w", err)
+	}
+
+	importPath, err := b.QualifyImport("./cmd/" + service)
+	if err != nil {
+		return nil,
+			fmt.Errorf("failed to qualify import path: %w", err)
+	}
+
+	r, err := b.Build(ctx, importPath)
+	if err != nil {
+		return nil,
+			fmt.Errorf("failed to build image: %w", err)
+	}
+
+	p, err := publish.NewDaemon(
+		imageNamer,
+		[]string{"latest"},
+		publish.WithLocalDomain("utxo-tracker"),
+	)
+	if err != nil {
+		return nil,
+			fmt.Errorf("failed to create publisher: %w", err)
+	}
+	defer p.Close()
+
+	ref, err := p.Publish(ctx, r, importPath)
+	if err != nil {
+		return nil,
+			fmt.Errorf("failed to publish: %w", err)
+	}
+	return ref, nil
 }

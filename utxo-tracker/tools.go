@@ -22,6 +22,12 @@ var toolOAPICodegen = runCmdV(
 	"github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@v2.4.1",
 )
 
+var toolKo = runCmdV(
+	"go",
+	"run",
+	"github.com/google/ko@latest",
+)
+
 // runCmdV does what sh.runCmd does but outputs to STD out
 func runCmdV(cmd string, args ...string) func(args ...string) error {
 	return func(args2 ...string) error {
