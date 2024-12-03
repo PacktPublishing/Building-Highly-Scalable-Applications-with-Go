@@ -83,6 +83,18 @@ func Generate() error {
 	)
 }
 
+type Image mg.Namespace
+
+// Account_service creates a Docker image for the account service
+func (Image) Account_service() error {
+	mg.Deps(Generate)
+	env := map[string]string{"KO_DOCKER_REPO": "ko.local"}
+	return sh.RunWithV(env, "go", "run", "github.com/google/ko@latest",
+		"build", "-B",
+		"./cmd/account-service",
+	)
+}
+
 // module returns the Go module name
 func module() string {
 	m, _ := sh.Output("go", "list", "-m")
@@ -123,7 +135,8 @@ func versionInfo() (r domain.ServiceVersion, e error) {
 
 func buildCmd(service string, v domain.ServiceVersion) error {
 	bindPath := fmt.Sprintf("%s/internal/infra/linker", module())
-	return sh.RunV("go", "build", "-o", service,
+	env := map[string]string{"CGO_ENABLED": "0"}
+	return sh.RunWithV(env, "go", "build", "-o", service,
 		"-ldflags", fmt.Sprintf(
 			"-X '%[1]s.CommitShortHash=%[2]s' "+
 				"-X '%[1]s.CommitLongHash=%[3]s' "+
@@ -131,7 +144,8 @@ func buildCmd(service string, v domain.ServiceVersion) error {
 				"-X '%[1]s.CommitSubject=%[5]s' "+
 				"-X '%[1]s.Committer=%[6]s' "+
 				"-X '%[1]s.BuildDate=%[7]s' "+
-				"-X '%[1]s.GoVersion=%[8]s'",
+				"-X '%[1]s.GoVersion=%[8]s' "+
+				"-s -w",
 			bindPath,
 			v.CommitShortHash,
 			v.CommitLongHash,
