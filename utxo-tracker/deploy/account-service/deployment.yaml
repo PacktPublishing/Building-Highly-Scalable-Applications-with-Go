@@ -1,0 +1,45 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: account-service
+  namespace: utxo-tracker
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: account-service
+  template:
+    metadata:
+      labels:
+        app: account-service
+    spec:
+      containers:
+      - name: account-service
+        image: utxo-tracker/account-service:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 8080
+        - containerPort: 8081
+        env:
+        - name: HTTP_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: account-service-config
+              key: HTTP_PORT
+        - name: MONITORING_HTTP_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: account-service-config
+              key: MONITORING_HTTP_PORT
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: 8081
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        livenessProbe:
+          httpGet:
+            path: /livez
+            port: 8081
+          initialDelaySeconds: 10
+          periodSeconds: 20

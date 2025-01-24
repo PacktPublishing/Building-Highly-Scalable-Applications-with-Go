@@ -1,6 +1,6 @@
-account-service
-fiat-quoter
-utxo-fetcher
+/account-service
+/fiat-quoter
+/utxo-fetcher
 *.gen.go
 .DS_Store
 cp.txt
