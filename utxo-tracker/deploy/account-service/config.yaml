@@ -8,4 +8,4 @@ data:
   HTTP_IDLE_TIMEOUT: "30"
   HTTP_SHUTDOWN_GRACE_PERIODVEL: "30"
   MONITORING_HTTP_PORT: "8081"
-  TRACING_EXPORTER_ENDPOINT: "http://localhost:4318/v1/traces"
+  TRACING_EXPORTER_ENDPOINT: "http://jaeger-collector.observe.svc.cluster.local:4318/v1/traces"
