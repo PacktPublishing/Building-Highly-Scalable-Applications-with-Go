@@ -40,12 +40,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  accounts:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/Account'
+                $ref: '#/components/schemas/GetAccountsResponse'
         '500':
           description: Internal server error
     post:
@@ -71,12 +66,10 @@ paths:
       responses:
         '201':
           description: Account successfully created.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Account'
         '400':
           description: Invalid request payload
+        '409':
+          description: Account name is already taken
         '500':
           description: Internal server error
 
@@ -112,6 +105,33 @@ paths:
           description: Account not found
         '500':
           description: Internal server error
+    delete:
+      summary: Delete an account by ID
+      description: Deletes a specific account by its ID.
+      operationId: deleteAccount
+      tags:
+        - Accounts
+      parameters:
+        - name: accountId
+          in: path
+          required: true
+          description: Unique ID of the account
+          schema:
+            type: string
+        - name: X-User-ID
+          in: header
+          required: true
+          description: Unique identifier for the user.
+          schema:
+            type: string
+            example: "abcd5678"
+      responses:
+        '204':
+          description: Account successfully deleted.
+        '404':
+          description: Account not found
+        '500':
+          description: Internal server error
 
 components:
   schemas:
@@ -141,17 +161,24 @@ components:
       type: object
       required:
         - name
-        - addresses
+        - xpub
+        - type
       properties:
         name:
           type: string
           description: The name of the new account
           example: "Satoshi's main Bitcoin account"
-        addresses:
+        xpub:
+          type: string
+          description: The xPub, yPub, zPub etc
+        type:
+          type: string
+          description: The account type
+          example: "taproot"
+    GetAccountsResponse:
+      type: object
+      properties:
+        accounts:
           type: array
-          description: |
-            List of Bitcoin addresses to associate with the new 
-            account.
           items:
-            type: string
-            example: "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa"
+            $ref: '#/components/schemas/Account'

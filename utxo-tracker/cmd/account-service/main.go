@@ -10,6 +10,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/hannesdejager/utxo-tracker/internal/domain"
 	"github.com/hannesdejager/utxo-tracker/internal/infra/api/restv1"
+	"github.com/hannesdejager/utxo-tracker/internal/infra/aspostgres"
 	"github.com/hannesdejager/utxo-tracker/internal/infra/env"
 	"github.com/hannesdejager/utxo-tracker/internal/infra/httpsvr"
 	"github.com/hannesdejager/utxo-tracker/internal/infra/jaeger"
@@ -38,9 +39,22 @@ func main() {
 	}
 	defer func() { _ = tp.Shutdown(context.Background()) }()
 
+	asConfig := env.AccountServiceDBConfig()
+
+	wRepo, db1, err := aspostgres.NewWriteRepo(asConfig)
+	if err != nil {
+		log.Error("Failed to initialize write repository", "error", err)
+		os.Exit(1)
+	}
+
+	rRepo, db2, err := aspostgres.NewReadRepo(asConfig)
+	if err != nil {
+		log.Error("Failed to initialize write repository", "error", err)
+		os.Exit(1)
+	}
 	svr := httpsvr.StartAsync(
 		env.HTTPConfig(),
-		restv1.NewHandler(log, "/rest/v1"),
+		restv1.NewHandler(log, "/rest/v1", rRepo, wRepo),
 	)
 
 	_ = httpsvr.StartAsync(
@@ -51,6 +65,9 @@ func main() {
 	sys.AwaitTermination()
 	log.Info("Shutting down...")
 	httpsvr.StopGracefully(svr, 30*time.Second)
+	log.Info("Closing DB connections")
+	db1.Close()
+	db2.Close()
 	log.Info("Bye!")
 }
 

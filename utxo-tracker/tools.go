@@ -28,6 +28,14 @@ var toolKo = runCmdV(
 	"github.com/google/ko@latest",
 )
 
+var toolMigrate = runCmdV(
+	"go",
+	"run",
+	"-tags",
+	"'postgres'",
+	"github.com/golang-migrate/migrate/v4/cmd/migrate@latest",
+)
+
 // runCmdV does what sh.runCmd does but outputs to STD out
 func runCmdV(cmd string, args ...string) func(args ...string) error {
 	return func(args2 ...string) error {

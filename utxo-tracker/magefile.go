@@ -18,6 +18,8 @@ import (
 	"github.com/hannesdejager/utxo-tracker/internal/domain"
 	"github.com/magefile/mage/mg"
 	"github.com/magefile/mage/sh"
+
+	_ "github.com/golang-migrate/migrate/v4/database/postgres"
 )
 
 // The path to the generated Go code for the account server REST API.
@@ -230,4 +232,28 @@ func koImg(service string, v domain.ServiceVersion) (
 			fmt.Errorf("failed to publish: %w", err)
 	}
 	return ref, nil
+}
+
+type Account_service mg.Namespace
+
+func (Account_service) Db_up() error {
+	mg.Deps(Generate)
+	return toolMigrate(
+		"-source",
+		"file://internal/infra/aspostgres/schema",
+		"-database",
+		"postgresql://as:as@localhost:5432/as?sslmode=disable",
+		"up",
+	)
+}
+
+func (Account_service) Db_down() error {
+	mg.Deps(Generate)
+	return toolMigrate(
+		"-source",
+		"file://internal/infra/aspostgres/schema",
+		"-database",
+		"postgresql://as:as@localhost:5432/as?sslmode=disable",
+		"down",
+	)
 }

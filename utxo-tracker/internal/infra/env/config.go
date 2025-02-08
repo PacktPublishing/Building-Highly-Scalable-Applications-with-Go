@@ -38,6 +38,18 @@ func TracingConfig() config.Tracing {
 	}
 }
 
+// AccountServiceDBConfig loads the database
+// information for the account service from the
+// environment
+func AccountServiceDBConfig() config.AccountServiceDB {
+	return config.AccountServiceDB{
+		DSN: asStringOrDef(
+			"ACCOUNT_SERVICE_DSN",
+			"postgresql://as:as@localhost:5432/as?sslmode=disable",
+		),
+	}
+}
+
 func asIntOrDef(key string, defaultVal int) int {
 	valueStr := os.Getenv(key)
 	if value, err := strconv.Atoi(valueStr); err == nil {
