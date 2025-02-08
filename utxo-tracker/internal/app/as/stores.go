@@ -26,10 +26,6 @@ type WriteRepo interface {
 // ErrIterationExit can be returned by a QueryCallback to prematurely end iteration
 var ErrIterationExit = errors.New("query: early exit of iteration")
 
-// AccountAddressesCallback defines how the callback function
-// should look for ReadRepo.GetAccountsWithAddresses
-type AccountAddressesCallback func(domain.AccountAddresses) error
-
 // WriteRepo defines the requirements for the database where we will read
 // account data from.
 type ReadRepo interface {
@@ -38,6 +34,8 @@ type ReadRepo interface {
 	// then GetAccountsWithAddresses exits without going through all records
 	// and it returns the error of the callback.
 	GetAccountsWithAddresses(context.Context, domain.UserName, func(domain.AccountAddresses) error) error
+
+	//GetAccountDetails(context.Context, domain.UserName, domain.AccountName) (domain.AccountAddresses, error)
 
 	// Tells if the given error is because of a record that was not found.
 	IsNotFoundError(e error) bool

@@ -18,7 +18,14 @@ import (
 
 //go:generate ../../../../scripts/gen-rest-v1-api.sh
 
-func NewHandler(log *slog.Logger, baseURL string, rr as.ReadRepo, wr as.WriteRepo) http.Handler {
+// LogicHandlers is just some input to NewHandler
+type LogicHandlers struct {
+	NewAccount    domain.CommandHandler[as.NewAccountCmd]
+	DeleteAccount domain.CommandHandler[as.DeleteAccountCmd]
+	GetAccounts   domain.QueryHandler[as.GetAccountsQuery, domain.AccountAddresses]
+}
+
+func NewHandler(log *slog.Logger, baseURL string, h LogicHandlers) http.Handler {
 	r := chi.NewRouter()
 	r.Use(prometheus.APIMiddleware)
 	r.Use(jaeger.TracingMiddleware)
@@ -35,7 +42,7 @@ func NewHandler(log *slog.Logger, baseURL string, rr as.ReadRepo, wr as.WriteRep
 		http.Redirect(w, r, baseURL+"/docs", http.StatusMovedPermanently)
 	})
 	return HandlerFromMuxWithBaseURL(
-		&impl{rr: rr, wr: wr, log: log},
+		&impl{log: log, h: h},
 		r,
 		baseURL,
 	)
@@ -43,8 +50,8 @@ func NewHandler(log *slog.Logger, baseURL string, rr as.ReadRepo, wr as.WriteRep
 
 // impl is our implementation of the ServerInterface that was generated.
 type impl struct {
-	rr  as.ReadRepo
 	wr  as.WriteRepo
+	h   LogicHandlers
 	log *slog.Logger
 }
 
@@ -58,9 +65,13 @@ func (s *impl) GetAccounts(
 	response := GetAccountsResponse{
 		Accounts: &accounts,
 	}
-	err := s.rr.GetAccountsWithAddresses(
+
+	query := as.GetAccountsQuery{
+		User: domain.UserName(params.XUserID),
+	}
+	err := s.h.GetAccounts.Handle(
 		r.Context(),
-		domain.UserName(params.XUserID),
+		query,
 		func(a domain.AccountAddresses) error {
 			acct := Account{
 				Id:        string(a.Account),
@@ -100,18 +111,21 @@ func (s *impl) CreateAccount(w http.ResponseWriter, r *http.Request, params Crea
 		http.Error(w, "Bad Request", http.StatusBadRequest)
 		return
 	}
-	err = s.wr.CreateUserAndAccount(r.Context(), domain.Account{
-		User: domain.UserName(params.XUserID),
-		ID:   domain.AccountName(payload.Name),
-		XPub: domain.XPubEtc(payload.Xpub),
-		Type: domain.AccountType(payload.Type),
+
+	err = s.h.NewAccount.Handle(r.Context(), as.NewAccountCmd{
+		Account: domain.Account{
+			User: domain.UserName(params.XUserID),
+			ID:   domain.AccountName(payload.Name),
+			XPub: domain.XPubEtc(payload.Xpub),
+			Type: domain.AccountType(payload.Type),
+		},
 	})
 	if err != nil {
 		if s.wr.IsDuplicateError(err) {
 			http.Error(w, "Conflict", http.StatusConflict)
 			return
 		}
-		s.log.ErrorContext(r.Context(), "Could not save account", "error", fmt.Errorf("%v", err))
+		s.log.ErrorContext(r.Context(), "Could create new account", "error", fmt.Errorf("%v", err))
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
@@ -127,12 +141,13 @@ func (s *impl) GetAccountById(w http.ResponseWriter, r *http.Request, accountId 
 // Delete an account by ID
 // (DELETE /accounts/{accountId})
 func (s *impl) DeleteAccount(w http.ResponseWriter, r *http.Request, accountId string, params DeleteAccountParams) {
-	wasDeleted, err := s.wr.DeleteAccount(r.Context(), domain.UserName(params.XUserID), domain.AccountName(accountId))
+	cmd := as.DeleteAccountCmd{
+		AccountName: domain.AccountName(accountId),
+		UserName:    domain.UserName(params.XUserID),
+	}
+	err := s.h.DeleteAccount.Handle(r.Context(), cmd)
 	if err != nil {
 		http.Error(w, "Bad Request", http.StatusBadRequest)
 		return
-	}
-	if !wasDeleted {
-		http.Error(w, "Not Found", http.StatusNotFound)
 	}
 }

@@ -16,11 +16,12 @@ func (NewAccountCmd) ID() domain.CommandID {
 }
 
 type NewAccountHandler struct {
-	repo WriteRepo
+	Repo WriteRepo
 }
 
 func (h NewAccountHandler) Handle(ctx context.Context, c NewAccountCmd) error {
-	return h.repo.CreateUserAndAccount(ctx, c.Account)
+	// TODO Try to find the addresses
+	return h.Repo.CreateUserAndAccount(ctx, c.Account)
 }
 
 type DeleteAccountCmd struct {
@@ -33,11 +34,11 @@ func (DeleteAccountCmd) ID() domain.CommandID {
 }
 
 type DeleteAccountHandler struct {
-	repo WriteRepo
+	Repo WriteRepo
 }
 
 func (h DeleteAccountHandler) Handle(ctx context.Context, c DeleteAccountCmd) error {
-	found, err := h.repo.DeleteAccount(ctx, c.UserName, c.AccountName)
+	found, err := h.Repo.DeleteAccount(ctx, c.UserName, c.AccountName)
 	if err != nil {
 		return fmt.Errorf(
 			"could not delete account %s for user %s: %w",
